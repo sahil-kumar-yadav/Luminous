@@ -2,6 +2,10 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "presets": ["next/babel", "@babel/preset-env"],
+    "plugins": [
+        ["@babel/plugin-transform-runtime", { "regenerator": true }]
+    ]
   }
 }
