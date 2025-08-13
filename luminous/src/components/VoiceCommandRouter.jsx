@@ -1,49 +1,30 @@
-'use client';
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import useSpeechRecognition from '@/hooks/useSpeechRecognition';
-import useTextToSpeech from '@/hooks/useTextToSpeech';
+// src/components/VoiceCommandRouter.jsx
+"use client";
+import useVoskSpeech from "@/hooks/useVoskSpeech";
+import { speak } from "@/lib/tts";
 
 export default function VoiceCommandRouter() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { speak } = useTextToSpeech();
+  const handleCommand = (command) => {
+    console.log("Heard:", command);
 
-  const handleCommand = (transcript) => {
-    const cmd = transcript.toLowerCase();
-    console.log('Heard:', cmd);
-
-    // Skip routing if we're already on a voice-active page
-    if (['/music', '/news', '/books'].includes(pathname)) return;
-
-    if (cmd.includes('news')) {
-      router.push('/news');
-      speak('Opening news');
-    } else if (cmd.includes('music')) {
-      router.push('/music');
-      speak('Opening music player');
-    } else if (cmd.includes('books') || cmd.includes('book')) {
-      router.push('/books');
-      speak('Opening books library');
-    } else if (cmd.includes('feedback') || cmd.includes('support')) {
-      router.push('/feedback');
-      speak('Opening feedback form');
+    if (command.includes("news")) {
+      speak("Navigating to news");
+      window.location.href = "/news";
+    }
+    if (command.includes("music")) {
+      speak("Opening music player");
+      window.location.href = "/music";
+    }
+    if (command.includes("books")) {
+      speak("Opening books");
+      window.location.href = "/books";
     }
   };
 
-  const { start, stop, listening } = useSpeechRecognition({
+  useVoskSpeech({
     onResult: handleCommand,
     onError: (err) => speak(`Speech recognition error: ${err}`)
   });
 
-  useEffect(() => {
-    start();
-    return () => stop();
-  }, []);
-
-  return (
-    <div aria-live="polite" className="fixed bottom-4 right-4 rounded-lg bg-black/80 px-3 py-2 text-sm text-white">
-      🎤 Voice {listening ? 'listening...' : 'off'}
-    </div>
-  );
+  return null; // This component doesn't render UI, only listens globally
 }

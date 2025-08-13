@@ -1,59 +1,54 @@
-import { useState, useEffect, useRef } from 'react';
+// hooks/useVoskSpeech.js
+import { useEffect, useRef } from "react";
+import { Model, KaldiRecognizer } from "vosk-browser";
 
-export default function useSpeechRecognition({ onResult, onError, lang = 'en-US' } = {}) {
-  const [listening, setListening] = useState(false);
-  const recognitionRef = useRef(null);
+export default function useVoskSpeech({ onResult, onError }) {
+  const modelRef = useRef(null);
+  const recognizerRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn('SpeechRecognition API not supported in this browser.');
-      return;
-    }
+    async function initVosk() {
+      try {
+        console.log("Loading Vosk model...");
+        modelRef.current = new Model("/models/vosk-model-small-en-us-0.15");
+        await modelRef.current.ready;
+        console.log("Model loaded");
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = lang;
+        recognizerRef.current = new KaldiRecognizer(modelRef.current, 16000);
+        recognizerRef.current.setWords(true);
 
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join('')
-        .trim();
-      if (onResult) onResult(transcript);
-    };
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-    recognition.onerror = (event) => {
-      if (event.error === 'no-speech') {
-        console.warn('No speech detected — try speaking again.');
-        return;
+        processor.onaudioprocess = (e) => {
+          recognizerRef.current.acceptWaveform(e.inputBuffer.getChannelData(0));
+          const result = recognizerRef.current.result();
+          if (result?.text) {
+            console.log("Heard:", result.text);
+            if (onResult) onResult(result.text);
+          }
+        };
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+      } catch (err) {
+        console.error("Vosk init error", err);
+        if (onError) onError(err);
       }
-      if (event.error === 'not-allowed') {
-        alert('Microphone access denied. Please allow it in your browser.');
+    }
+
+    initVosk();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
-      console.error('Speech recognition error', event.error);
-      if (onError) onError(event.error);
     };
+  }, [onResult, onError]);
 
-
-    recognitionRef.current = recognition;
-  }, [lang, onResult, onError]);
-
-  const start = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.start();
-      setListening(true);
-    }
-  };
-
-  const stop = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setListening(false);
-    }
-  };
-
-  return { listening, start, stop };
+  return null; // hook doesn't render UI
 }
