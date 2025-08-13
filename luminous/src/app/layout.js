@@ -3,6 +3,7 @@ import "./globals.css";
 import SkipLink from "@/components/SkipLink";
 import Footer from "@/components/Footer";
 import Nav from "@/components/Nav";
+import VoiceCommandRouter from "@/components/VoiceCommandRouter";
 
 
 
@@ -20,7 +21,8 @@ export default function RootLayout({ children }) {
         <main id="main-content" role="main" className="mx-auto max-w-5xl px-4 py-6">
           {children}
         </main>
-        <Footer/>
+        <Footer />
+        <VoiceCommandRouter />
       </body>
     </html>
   );
