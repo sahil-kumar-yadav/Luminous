@@ -86,29 +86,6 @@ npm run dev
 
 ---
 
-## **Folder Structure**
-
-```
-/public
-  /audio               # Music files
-  /books               # Book content for TTS
-/src
-  /components
-    MusicPlayer.js
-    VoiceCommandRouter.js
-  /hooks
-    useSpeechRecognition.js
-  /lib
-    musicData.js
-    booksData.js
-/pages
-  index.js
-  music.js
-  books.js
-```
-
----
-
 ## **Technologies Used**
 
 * **React 18 + Next.js 13** – Client-side and server-side rendering.
