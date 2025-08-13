@@ -1,8 +1,11 @@
+import AccessibleBookPlayer from "@/components/AccessibleBookPlayer";
+import { books } from "@/lib/booksData";
+
 export default function BooksPage() {
   return (
-    <section aria-labelledby="books-heading">
-      <h1 id="books-heading" className="mb-4 text-2xl font-bold">Books</h1>
-      <p>Browse audiobooks or listen via text‑to‑speech.</p>
-    </section>
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-4">Accessible Books</h1>
+      <AccessibleBookPlayer books={books} />
+    </div>
   );
 }

@@ -14,15 +14,31 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="bg-white text-black dark:bg-neutral-950 dark:text-neutral-50">
+
+    <html lang="en" className="scroll-smooth">
+      <body className="flex min-h-screen flex-col bg-white text-black dark:bg-neutral-950 dark:text-neutral-50 font-sans antialiased">
+        {/* Skip to main content link for keyboard users */}
         <SkipLink />
-        <Nav />
-        <main id="main-content" role="main" className="mx-auto max-w-5xl px-4 py-6">
+
+        {/* Site header / navigation */}
+        <header role="banner" className="border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
+          <Nav />
+        </header>
+
+        {/* Main content area */}
+        <main
+          id="main-content"
+          role="main"
+          className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8"
+        >
           <GlobalVoiceCommands />
           {children}
         </main>
-        <Footer />
+
+        {/* Footer / site info */}
+        <footer role="contentinfo" className="border-t border-neutral-200 dark:border-neutral-800 mt-8">
+          <Footer />
+        </footer>
       </body>
     </html>
   );

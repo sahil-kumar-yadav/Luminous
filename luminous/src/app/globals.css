@@ -1,27 +1,101 @@
 @import "tailwindcss";
 
+/* ========== Global Accessible Defaults ========== */
 
-/* Accessible defaults */
 :root {
-  color-scheme: light dark;
+  color-scheme: light white;
+  --outline-color: currentColor;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 html:focus-within {
   scroll-behavior: smooth;
 }
 
-/* Visible focus outlines for keyboard users */
+body {
+  margin: 0;
+  line-height: 1.6;
+  font-family: theme("fontFamily.sans");
+  background-color: theme("colors.white");
+  color: theme("colors.black");
+}
+
+.dark body {
+  background-color: theme("colors.neutral.950");
+  color: theme("colors.neutral.50");
+}
+
+/* ========== Focus Styles ========== */
 *:focus-visible {
-  outline: 3px solid currentColor;
+  outline: 3px solid var(--outline-color);
   outline-offset: 2px;
 }
 
-/* Ensure good contrast on links/buttons by default */
-a, button {
+/* ========== Link & Button Defaults ========== */
+a,
+button {
   font-weight: 600;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-/* Reduce motion if user prefers */
+/* Use cursor:pointer for all buttons by default */
+button {
+  cursor: pointer;
+}
+
+/* ========== Accessibility: Reduced Motion ========== */
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ========== Typography Defaults ========== */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+p {
+  margin-bottom: 1em;
+  max-width: 65ch;
+}
+
+ul, ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1em;
+}
+
+/* ========== Images ========== */
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ========== Skip Link (if not styled via component) ========== */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #000;
+  color: #fff;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.3s ease;
+}
+
+.skip-link:focus {
+  top: 0;
 }
