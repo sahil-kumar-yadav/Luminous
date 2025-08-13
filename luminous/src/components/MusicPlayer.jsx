@@ -1,89 +1,108 @@
 'use client';
-import { useRef, useState, useEffect } from 'react';
-import { songs } from '@/lib/musicData';
-import useTextToSpeech from '@/hooks/useTextToSpeech';
+import { useState, useEffect, useRef } from 'react';
 import useSpeechRecognition from '@/hooks/useSpeechRecognition';
+import useTextToSpeech from '@/hooks/useTextToSpeech';
 
-export default function MusicPlayer() {
-  const audioRef = useRef(null);
-  const [currentSongIndex, setCurrentSongIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+export default function MusicPlayer({ playlist }) {
   const { speak } = useTextToSpeech();
+  const audioRef = useRef(null);
 
-  const playSong = (index) => {
-    if (index < 0 || index >= songs.length) return;
+  const [currentSongIndex, setCurrentSongIndex] = useState(0);
+  const [ready, setReady] = useState(false);
+
+  const { start, stop, listening } = useSpeechRecognition({
+    onResult: (cmd) => handleCommand(cmd.toLowerCase()),
+    onError: (err) => {
+      if (err === 'no-speech') return; // ignore silent cases
+      if (err === 'not-allowed') speak('Please allow microphone access.');
+      console.error('Speech recognition error:', err);
+    }
+  });
+
+  useEffect(() => {
+    return () => stop();
+  }, []);
+
+  const playSong = (index = currentSongIndex) => {
     setCurrentSongIndex(index);
-    audioRef.current.src = songs[index].url;
-    audioRef.current.play();
-    setIsPlaying(true);
-    speak(`Playing ${songs[index].title}`);
+    const song = playlist[index];
+    audioRef.current.src = song.url;
+    audioRef.current
+      .play()
+      .then(() => speak(`Playing ${song.title}`))
+      .catch((err) => console.error('Playback failed:', err));
   };
 
   const pauseSong = () => {
     audioRef.current.pause();
-    setIsPlaying(false);
     speak('Paused');
   };
 
   const nextSong = () => {
-    playSong((currentSongIndex + 1) % songs.length);
+    const nextIndex = (currentSongIndex + 1) % playlist.length;
+    playSong(nextIndex);
   };
 
   const prevSong = () => {
-    playSong((currentSongIndex - 1 + songs.length) % songs.length);
+    const prevIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
+    playSong(prevIndex);
   };
 
-  const volumeUp = () => {
-    audioRef.current.volume = Math.min(1, audioRef.current.volume + 0.1);
-    speak('Volume up');
+  const handleCommand = (cmd) => {
+    console.log('Voice command:', cmd);
+    if (cmd.includes('play next')) nextSong();
+    else if (cmd.includes('play previous')) prevSong();
+    else if (cmd.includes('pause')) pauseSong();
+    else if (cmd.includes('play')) playSong();
   };
 
-  const volumeDown = () => {
-    audioRef.current.volume = Math.max(0, audioRef.current.volume - 0.1);
-    speak('Volume down');
-  };
-
-  // Voice command handling
-  const handleCommand = (transcript) => {
-    const cmd = transcript.toLowerCase();
-    console.log('Music heard:', cmd);
-
-    if (cmd.includes('play song')) {
-      const songName = cmd.replace('play song', '').trim();
-      const foundIndex = songs.findIndex(s => s.title.toLowerCase().includes(songName));
-      if (foundIndex >= 0) playSong(foundIndex);
-      else speak('Song not found');
-    } else if (cmd.includes('play')) {
-      playSong(currentSongIndex);
-    } else if (cmd.includes('pause')) {
-      pauseSong();
-    } else if (cmd.includes('next song') || cmd.includes('skip')) {
-      nextSong();
-    } else if (cmd.includes('previous song') || cmd.includes('back')) {
-      prevSong();
-    } else if (cmd.includes('volume up')) {
-      volumeUp();
-    } else if (cmd.includes('volume down')) {
-      volumeDown();
+  const unlockAndStart = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch (e) {
+      console.warn('Audio unlock failed:', e);
     }
+    setReady(true);
+    start();
+    speak('Voice control enabled. Say Play to start music.');
   };
-
-  useSpeechRecognition({ onResult: handleCommand });
-
-  // Autoplay first song on load (optional)
-  useEffect(() => {
-    playSong(0);
-  }, []);
 
   return (
     <div>
-      <h2 className="mb-2 text-xl font-semibold">Now Playing: {songs[currentSongIndex].title}</h2>
-      <audio ref={audioRef} controls className="w-full" />
-      <div className="mt-4 flex gap-2">
-        <button onClick={prevSong} className="px-4 py-2 rounded bg-gray-200 focus-visible:ring">Prev</button>
-        <button onClick={() => playSong(currentSongIndex)} className="px-4 py-2 rounded bg-green-300 focus-visible:ring">Play</button>
-        <button onClick={pauseSong} className="px-4 py-2 rounded bg-red-300 focus-visible:ring">Pause</button>
-        <button onClick={nextSong} className="px-4 py-2 rounded bg-gray-200 focus-visible:ring">Next</button>
+      {!ready && (
+        <button
+          onClick={unlockAndStart}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Enable Voice Control
+        </button>
+      )}
+
+      <audio ref={audioRef} controls className="mt-4 w-full" />
+
+      {ready && (
+        <p className="mt-2 text-sm text-gray-700">
+          🎤 Voice {listening ? 'listening...' : 'off'} — Try: "Play", "Pause", "Play next", "Play previous"
+        </p>
+      )}
+
+      <div className="mt-4">
+        <h2 className="font-bold">Playlist</h2>
+        <ul>
+          {playlist.map((song, i) => (
+            <li
+              key={song.url}
+              className={i === currentSongIndex ? 'font-bold text-blue-600' : ''}
+            >
+              {i + 1}. {song.title}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

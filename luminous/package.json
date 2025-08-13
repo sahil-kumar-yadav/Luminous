@@ -11,7 +11,8 @@
   "dependencies": {
     "next": "15.4.6",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "vosk-browser": "^0.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

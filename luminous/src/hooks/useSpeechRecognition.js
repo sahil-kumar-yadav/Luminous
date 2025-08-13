@@ -26,9 +26,17 @@ export default function useSpeechRecognition({ onResult, onError, lang = 'en-US'
     };
 
     recognition.onerror = (event) => {
+      if (event.error === 'no-speech') {
+        console.warn('No speech detected — try speaking again.');
+        return;
+      }
+      if (event.error === 'not-allowed') {
+        alert('Microphone access denied. Please allow it in your browser.');
+      }
       console.error('Speech recognition error', event.error);
       if (onError) onError(event.error);
     };
+
 
     recognitionRef.current = recognition;
   }, [lang, onResult, onError]);

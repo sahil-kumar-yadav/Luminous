@@ -1,16 +1,20 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import useSpeechRecognition from '@/hooks/useSpeechRecognition';
 import useTextToSpeech from '@/hooks/useTextToSpeech';
 
 export default function VoiceCommandRouter() {
   const router = useRouter();
+  const pathname = usePathname();
   const { speak } = useTextToSpeech();
 
   const handleCommand = (transcript) => {
     const cmd = transcript.toLowerCase();
     console.log('Heard:', cmd);
+
+    // Skip routing if we're already on a voice-active page
+    if (['/music', '/news', '/books'].includes(pathname)) return;
 
     if (cmd.includes('news')) {
       router.push('/news');
