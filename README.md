@@ -1,6 +1,3 @@
-Absolutely! Here’s a polished **README** for your voice-first accessible web platform project:
-
----
 
 # 🌟 Luminous Web – Voice-First Accessible Platform
 
