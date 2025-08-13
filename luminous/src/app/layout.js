@@ -19,10 +19,10 @@ export default function RootLayout({ children }) {
         <SkipLink />
         <Nav />
         <main id="main-content" role="main" className="mx-auto max-w-5xl px-4 py-6">
+        <VoiceCommandRouter />
           {children}
         </main>
         <Footer />
-        <VoiceCommandRouter />
       </body>
     </html>
   );

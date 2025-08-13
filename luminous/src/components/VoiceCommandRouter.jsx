@@ -1,30 +1,26 @@
-// src/components/VoiceCommandRouter.jsx
 "use client";
-import useVoskSpeech from "@/hooks/useVoskSpeech";
+import useVosk from "@/hooks/useVosk";
 import { speak } from "@/lib/tts";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function VoiceCommandRouter() {
-  const handleCommand = (command) => {
-    console.log("Heard:", command);
+  const router = useRouter();
 
-    if (command.includes("news")) {
-      speak("Navigating to news");
-      window.location.href = "/news";
-    }
-    if (command.includes("music")) {
-      speak("Opening music player");
-      window.location.href = "/music";
-    }
-    if (command.includes("books")) {
-      speak("Opening books");
-      window.location.href = "/books";
-    }
+  const handle = (cmd) => {
+    const text = cmd.toLowerCase();
+    if (text.includes("news")) { speak("Opening news"); router.push("/news"); }
+    else if (text.includes("music")) { speak("Playing music"); router.push("/music"); }
+    else if (text.includes("books")) { speak("Opening books"); router.push("/books"); }
   };
 
-  useVoskSpeech({
-    onResult: handleCommand,
-    onError: (err) => speak(`Speech recognition error: ${err}`)
+  const { start, listening } = useVosk({
+    onResult: handle,
+    onPartial: () => {},
+    onError: (err) => console.error("Speech error:", err),
   });
 
-  return null; // This component doesn't render UI, only listens globally
+  useEffect(() => { start(); }, []);
+
+  return null;
 }

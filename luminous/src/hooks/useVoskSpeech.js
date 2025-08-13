@@ -1,95 +1,100 @@
-// src/hooks/useVoskSpeech.js
 "use client";
 import { useEffect, useRef, useState } from "react";
-import * as vosk from "vosk-browser";
 
 export default function useVoskSpeech({ onResult, onError }) {
-  const [listening, setListening] = useState(false);
   const recognizerRef = useRef(null);
-  const mediaStreamRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const audioCtxRef = useRef(null);
+  const processorRef = useRef(null);
+  const sourceRef = useRef(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let voskModule;
 
     async function initVosk() {
       try {
-        console.log("Loading Vosk model...");
-        const model = await vosk.Model.load("/models/vosk");
-        console.log("Model loaded");
+        // Load vosk.js dynamically
+        voskModule = await import(
+          /* webpackIgnore: true */ "/vosk/vosk.js"
+        );
 
-        // ✅ Correct recognizer constructor for vosk-browser
-        const recognizer = new vosk.KaldiRecognizer(model, 16000);
+        // Init WASM runtime
+        const Vosk = await voskModule.default({
+          locateFile: (path) => `/vosk/${path}`,
+        });
+
+        // Load model
+        const model = new Vosk.Model("/models/vosk");
+        const recognizer = new model.Recognizer(16000);
         recognizerRef.current = recognizer;
+
+        console.log("Vosk model loaded");
       } catch (err) {
         console.error("Vosk init error", err);
         if (onError) onError(err);
-        // Fall back to Web Speech API if available
-        initWebSpeechFallback();
       }
-    }
-
-    function initWebSpeechFallback() {
-      if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-        console.error("No speech recognition available");
-        return;
-      }
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.trim();
-        if (onResult) onResult(transcript);
-      };
-      recognition.onerror = (event) => {
-        if (onError) onError(event.error);
-      };
-      recognizerRef.current = { start: () => recognition.start(), stop: () => recognition.stop() };
     }
 
     initVosk();
+
     return () => {
-      cancelled = true;
       stop();
+      recognizerRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function start() {
-    if (!recognizerRef.current) return;
-    setListening(true);
+    if (!recognizerRef.current) {
+      console.warn("Recognizer not ready yet");
+      return;
+    }
 
     try {
-      mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const source = audioContext.createMediaStreamSource(mediaStreamRef.current);
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioCtxRef.current = new AudioContext({ sampleRate: 16000 });
+      sourceRef.current = audioCtxRef.current.createMediaStreamSource(stream);
+      processorRef.current = audioCtxRef.current.createScriptProcessor(4096, 1, 1);
 
-      processor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        recognizerRef.current.acceptWaveform(inputData);
-        const result = recognizerRef.current.result();
-        if (result && result.text && onResult) {
-          onResult(result.text);
+      processorRef.current.onaudioprocess = (event) => {
+        const inputData = event.inputBuffer.getChannelData(0);
+        const int16Data = floatTo16BitPCM(inputData);
+
+        if (recognizerRef.current.acceptWaveform(int16Data)) {
+          const res = recognizerRef.current.result();
+          if (res?.text && onResult) onResult(res.text);
+        } else {
+          const partial = recognizerRef.current.partialResult();
+          if (partial?.partial && onResult) onResult(partial.partial);
         }
       };
 
-      source.connect(processor);
-      processor.connect(audioContext.destination);
+      sourceRef.current.connect(processorRef.current);
+      processorRef.current.connect(audioCtxRef.current.destination);
+
+      setListening(true);
     } catch (err) {
-      console.error("Error starting mic", err);
+      console.error("Mic error", err);
       if (onError) onError(err);
     }
   }
 
   function stop() {
+    processorRef.current?.disconnect();
+    sourceRef.current?.disconnect();
+    audioCtxRef.current?.close();
     setListening(false);
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      mediaStreamRef.current = null;
-    }
   }
 
   return { start, stop, listening };
+}
+
+function floatTo16BitPCM(float32Array) {
+  const buffer = new ArrayBuffer(float32Array.length * 2);
+  const view = new DataView(buffer);
+  let offset = 0;
+  for (let i = 0; i < float32Array.length; i++, offset += 2) {
+    let s = Math.max(-1, Math.min(1, float32Array[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return buffer;
 }
