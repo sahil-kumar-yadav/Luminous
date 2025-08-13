@@ -1,6 +1,0 @@
-{
-  "model": {
-    "type": "kaldi",
-    "path": "vosk-model-small-en-us-0.15.tar.gz"
-  }
-}

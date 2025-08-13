@@ -1,26 +1,29 @@
 "use client";
-import useVosk from "@/hooks/useVosk";
-import { speak } from "@/lib/tts";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
-export default function VoiceCommandRouter() {
-  const router = useRouter();
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
-  const handle = (cmd) => {
-    const text = cmd.toLowerCase();
-    if (text.includes("news")) { speak("Opening news"); router.push("/news"); }
-    else if (text.includes("music")) { speak("Playing music"); router.push("/music"); }
-    else if (text.includes("books")) { speak("Opening books"); router.push("/books"); }
-  };
+export default function VoiceCommandRouter({ onCommand }) {
+  const commands = ["play", "pause", "next", "previous", "stop"];
 
-  const { start, listening } = useVosk({
-    onResult: handle,
-    onPartial: () => {},
-    onError: (err) => console.error("Speech error:", err),
+  const { start, stop, listening } = useSpeechRecognition({
+    phrases: commands,
+    lang: "en-US",
+    minConfidence: 0.75,
+    onResult: (cmd) => {
+      console.log("[Command Router] Executing:", cmd);
+      onCommand(cmd);
+    },
+    onError: (err) => console.error("[Command Router] Speech error:", err),
   });
 
-  useEffect(() => { start(); }, []);
-
-  return null;
+  return (
+    <div className="mt-4">
+      <button onClick={start} disabled={listening} className="px-4 py-2 bg-green-600 text-white rounded">
+        🎙 Start Listening
+      </button>
+      <button onClick={stop} disabled={!listening} className="ml-2 px-4 py-2 bg-red-600 text-white rounded">
+        ⏹ Stop
+      </button>
+    </div>
+  );
 }
